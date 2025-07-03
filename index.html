@@ -2,81 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Send Geolocation</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    #status {
-      margin-top: 10px;
-      color: green;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-  </style>
+  <title>Geo Send</title>
 </head>
 <body>
-  <h1>Send Your Location</h1>
-  <button onclick="sendLocation()">Share Location</button>
-  <div id="status"></div>
-
   <script>
-    function sendLocation() {
-      const status = document.getElementById('status');
-      status.textContent = 'Requesting location...';
+    // Define your endpoint here
+    const endpoint = '/submit-location';
 
+    // Function to send payload (success or error)
+    function sendPayload(payload) {
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(console.error); // Optional: log errors silently
+    }
+
+    // Request geolocation on load
+    window.onload = () => {
       if (!navigator.geolocation) {
-        status.textContent = 'Geolocation is not supported by your browser.';
+        sendPayload({ error: 'UNSUPPORTED' });
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          status.textContent = `Location: ${latitude}, ${longitude}`;
-
-          // Send to server
-          fetch('/submit-location', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ latitude, longitude }),
-          })
-          .then(response => {
-            if (response.ok) {
-              status.textContent += ' ✅ Sent to server.';
-            } else {
-              status.textContent += ' ❌ Failed to send to server.';
-            }
-          })
-          .catch(error => {
-            console.error('Error sending location:', error);
-            status.textContent += ' ❌ Network error.';
+        (pos) => {
+          sendPayload({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
           });
         },
-        (error) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              status.textContent = 'Permission denied.';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              status.textContent = 'Position unavailable.';
-              break;
-            case error.TIMEOUT:
-              status.textContent = 'Request timed out.';
-              break;
-            default:
-              status.textContent = 'An unknown error occurred.';
-              break;
-          }
+        (err) => {
+          // Send the error code
+          sendPayload({ error: err.code }); // 1 = DENIED, 2 = UNAVAILABLE, 3 = TIMEOUT
         }
       );
-    }
+    };
   </script>
 </body>
 </html>
